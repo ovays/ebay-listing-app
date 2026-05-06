@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local server-side token/session storage
+/.data/
+
 # vercel
 .vercel
 
