@@ -146,32 +146,6 @@ export default function ProductsPage() {
       });
   }, []);
 
-  async function updateProduct(id: string, updates: Partial<Product>) {
-    try {
-      const res = await fetch('/api/update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id, updates }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Update failed');
-      }
-
-      const data = await res.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Update failed');
-      }
-    } catch (err) {
-      console.error(err);
-      setCategorySaveError('Category could not be saved.');
-      throw err;
-    }
-  }
-
   const updateProductField = (
     index: number,
     field: keyof Product,
@@ -184,21 +158,45 @@ export default function ProductsPage() {
     );
   };
 
-  const updateProductCategory = async (index: number, categoryName: string) => {
+  const updateProductCategory = async (index: number, value: string) => {
     const product = products[index];
     const previousCategoryName = product?.categoryName;
 
     setCategorySaveError('');
-    updateProductField(index, 'categoryName', categoryName);
+    updateProductField(index, 'categoryName', value);
 
     if (!product?.id) {
       return;
     }
 
     try {
-      await updateProduct(String(product.id), { categoryName });
+      console.log('Updating category:', product.id, value);
+
+      const res = await fetch('/api/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: product.id,
+          updates: {
+            categoryName: value,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Update failed');
+      }
+
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Update failed');
+      }
     } catch {
       updateProductField(index, 'categoryName', previousCategoryName ?? '');
+      setCategorySaveError('Category could not be saved.');
     }
   };
 
@@ -413,7 +411,7 @@ export default function ProductsPage() {
   };
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-slate-50 px-4 py-6 text-slate-950 sm:px-6 sm:py-8 lg:px-8">
+    <div className="px-4 py-6 text-slate-100 sm:px-6 sm:py-8 lg:px-8">
       {loading && (
         <div className="loader-overlay" role="status" aria-live="polite">
           <div className="spinner" />
@@ -422,29 +420,32 @@ export default function ProductsPage() {
       )}
 
       <div className="mx-auto w-full max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-6 flex flex-col gap-4 border-b border-white/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-1 text-sm font-medium text-slate-500">
+            <p className="mb-1 text-sm font-medium text-cyan-300">
               Inventory admin
             </p>
-            <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
-              Saved Products
+            <h1 className="text-2xl font-semibold leading-tight text-white sm:text-3xl">
+              Products
             </h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-400">
+              Review imported products, choose eBay categories, and publish validated listings.
+            </p>
           </div>
           <div className="grid grid-cols-3 gap-3 text-sm">
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-slate-500">Products</p>
-              <p className="text-xl font-semibold">{products.length}</p>
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 shadow-sm">
+              <p className="text-slate-400">Products</p>
+              <p className="text-xl font-semibold text-white">{products.length}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-slate-500">Valid</p>
-              <p className="text-xl font-semibold">
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 shadow-sm">
+              <p className="text-slate-400">Valid</p>
+              <p className="text-xl font-semibold text-white">
                 {validationResults.filter((result) => result.valid).length}
               </p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <p className="text-slate-500">Page</p>
-              <p className="text-xl font-semibold">
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] px-4 py-3 shadow-sm">
+              <p className="text-slate-400">Page</p>
+              <p className="text-xl font-semibold text-white">
                 {visiblePage}/{totalPages}
               </p>
             </div>
@@ -455,7 +456,7 @@ export default function ProductsPage() {
           <button
             onClick={exportCSV}
             disabled={publishingProductId !== null}
-            className="min-h-11 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 lg:w-auto"
+            className="min-h-11 rounded-lg border border-cyan-300/30 bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:bg-cyan-300 disabled:opacity-60 lg:w-auto"
           >
             Export CSV
           </button>
@@ -463,7 +464,7 @@ export default function ProductsPage() {
           <button
             onClick={saveChanges}
             disabled={saving || publishingProductId !== null}
-            className="min-h-11 rounded-md bg-green-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 lg:w-auto"
+            className="min-h-11 rounded-lg border border-emerald-300/30 bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:opacity-60 lg:w-auto"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
@@ -471,7 +472,7 @@ export default function ProductsPage() {
           <button
             onClick={publishFirstProduct}
             disabled={publishingProductId !== null || products.length === 0}
-            className="min-h-11 rounded-md bg-purple-600 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60 lg:w-auto"
+            className="min-h-11 rounded-lg border border-violet-300/30 bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:opacity-60 lg:w-auto"
           >
             {publishingProductId !== null
               ? 'Publishing...'
@@ -482,7 +483,7 @@ export default function ProductsPage() {
 
           <a
             href="/dashboard"
-            className={`min-h-11 rounded-md bg-slate-700 px-4 py-2.5 text-center text-sm font-medium text-white lg:w-auto ${
+            className={`min-h-11 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2.5 text-center text-sm font-semibold text-slate-100 transition hover:bg-white/10 lg:w-auto ${
               publishingProductId !== null ? 'pointer-events-none opacity-60' : ''
             }`}
           >
@@ -496,8 +497,8 @@ export default function ProductsPage() {
             aria-live="polite"
             className={`mb-6 rounded-md border px-4 py-3 text-sm ${
               publishAlert.type === 'success'
-                ? 'border-green-200 bg-green-50 text-green-800'
-                : 'border-red-200 bg-red-50 text-red-800'
+                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                : 'border-red-400/30 bg-red-400/10 text-red-200'
             }`}
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -508,7 +509,7 @@ export default function ProductsPage() {
                     publishProduct(publishAlert.productIndex ?? 0)
                   }
                   disabled={publishingProductId !== null || products.length === 0}
-                  className="min-h-10 rounded-md bg-white px-3 py-2 text-sm font-medium text-red-800 shadow-sm ring-1 ring-inset ring-red-200 hover:bg-red-50 disabled:opacity-60 sm:w-auto"
+                  className="min-h-10 rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-red-100 shadow-sm ring-1 ring-inset ring-red-400/30 hover:bg-white/15 disabled:opacity-60 sm:w-auto"
                 >
                   Try again
                 </button>
@@ -523,8 +524,8 @@ export default function ProductsPage() {
             aria-live="polite"
             className={`mb-6 rounded-md border px-4 py-3 text-sm ${
               productActionMessage.type === 'success'
-                ? 'border-green-200 bg-green-50 text-green-800'
-                : 'border-red-200 bg-red-50 text-red-800'
+                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200'
+                : 'border-red-400/30 bg-red-400/10 text-red-200'
             }`}
           >
             {productActionMessage.message}
@@ -534,7 +535,7 @@ export default function ProductsPage() {
         {categorySaveError && (
           <div
             role="alert"
-            className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+            className="mb-6 rounded-md border border-amber-300/30 bg-amber-300/10 px-4 py-3 text-sm text-amber-100"
           >
             {categorySaveError}
           </div>
@@ -543,7 +544,7 @@ export default function ProductsPage() {
         <div
           className="product-grid"
           style={{
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
           }}
         >
           {paginatedProducts.map((p, pageIndex) => {
@@ -568,7 +569,7 @@ export default function ProductsPage() {
             return (
               <div
                 key={p.id ?? i}
-                className="product-card min-w-0 overflow-hidden border border-slate-200 bg-white p-3 sm:p-4"
+                className="product-card min-w-0 overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur sm:p-5"
               >
                 {p.images?.[0] && (
                   <img
@@ -591,15 +592,15 @@ export default function ProductsPage() {
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                       Publish status
                     </p>
-                    <p className="break-words text-sm font-semibold text-slate-800">
+                    <p className="break-words text-sm font-semibold text-slate-100">
                       {publishStatus}
                     </p>
                   </div>
                   <span
                     className={`w-fit rounded px-2 py-1 text-xs ${
                       validation.valid
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/20'
+                        : 'bg-red-400/10 text-red-200 ring-1 ring-red-400/20'
                     }`}
                   >
                     {validation.valid ? 'Valid' : 'Needs fixes'}
@@ -610,7 +611,7 @@ export default function ProductsPage() {
                       publishingProductId !== null ||
                       (!validation.valid && !isPublished)
                     }
-                    className="min-h-10 rounded-md bg-purple-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 sm:w-auto"
+                    className="min-h-10 rounded-lg bg-violet-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:opacity-60 sm:w-auto"
                   >
                     {isPublishing
                       ? 'Publishing...'
@@ -625,14 +626,14 @@ export default function ProductsPage() {
                   <button
                     onClick={() => p.id && deleteProduct(String(p.id))}
                     disabled={isPublishing || !p.id}
-                    className="min-h-9 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60"
+                    className="min-h-9 rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400 disabled:opacity-60"
                   >
                     Delete
                   </button>
                 </div>
 
                 {(p.ebay_inventory_item_id || p.ebay_offer_id || p.ebay_item_id) && (
-                  <dl className="mb-3 space-y-1 rounded-md bg-slate-50 p-3 text-xs text-slate-600">
+                  <dl className="mb-3 space-y-1 rounded-lg border border-white/10 bg-white/[0.04] p-3 text-xs text-slate-400">
                     {p.ebay_inventory_item_id && (
                       <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between sm:gap-3">
                         <dt>Inventory ID</dt>
@@ -657,20 +658,20 @@ export default function ProductsPage() {
                 )}
 
                 {p.publish_error && (
-                  <p className="mb-3 break-words rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                    <p className="mb-3 break-words rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">
                     {p.publish_error}
                   </p>
                 )}
 
                 {!validation.valid && !isPublished && (
-                  <ul className="mb-3 space-y-1 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+                  <ul className="mb-3 space-y-1 rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200">
                     {validation.messages.map((message) => (
                       <li key={message}>{message}</li>
                     ))}
                   </ul>
                 )}
 
-                <label className="mb-1 block text-sm font-semibold">
+                <label className="mb-1 block text-sm font-semibold text-slate-200">
                   Shipping policy
                 </label>
                 <select
@@ -679,7 +680,7 @@ export default function ProductsPage() {
                     updateProductField(i, 'fulfillmentPolicyId', e.target.value)
                   }
                   disabled={isPublishing}
-                  className="mb-3 min-h-11 w-full min-w-0 rounded-md border bg-white px-3 py-2.5 text-base text-slate-950 disabled:opacity-60 sm:text-sm"
+                  className="mb-3 min-h-11 w-full min-w-0 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 disabled:opacity-60 sm:text-sm"
                 >
                   {SHIPPING_POLICIES.map((policy) => (
                     <option key={policy.value} value={policy.value}>
@@ -688,14 +689,14 @@ export default function ProductsPage() {
                   ))}
                 </select>
 
-                <label className="mb-1 block text-sm font-semibold">
+                <label className="mb-1 block text-sm font-semibold text-slate-200">
                   Category
                 </label>
                 <select
                   value={p.categoryName ?? ''}
                   onChange={(e) => updateProductCategory(i, e.target.value)}
                   disabled={isPublishing}
-                  className="mb-3 min-h-11 w-full min-w-0 rounded-md border bg-white px-3 py-2.5 text-base text-slate-950 disabled:opacity-60 sm:text-sm"
+                  className="mb-3 min-h-11 w-full min-w-0 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 disabled:opacity-60 sm:text-sm"
                 >
                   <option value="">Select category</option>
                   {PRODUCT_CATEGORIES.map((category) => (
@@ -705,21 +706,21 @@ export default function ProductsPage() {
                   ))}
                 </select>
 
-                <label className="mb-1 block text-sm font-semibold">Title</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-200">Title</label>
                 <input
                   value={p.title ?? ''}
                   onChange={(e) => updateProductField(i, 'title', e.target.value)}
-                  className="mb-3 min-h-11 w-full min-w-0 rounded-md border px-3 py-2.5 text-base sm:text-sm"
+                  className="mb-3 min-h-11 w-full min-w-0 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 sm:text-sm"
                 />
 
-                <label className="mb-1 block text-sm font-semibold">Price</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-200">Price</label>
                 <input
                   value={p.price ?? ''}
                   onChange={(e) => updateProductField(i, 'price', e.target.value)}
-                  className="mb-3 min-h-11 w-full min-w-0 rounded-md border px-3 py-2.5 text-base sm:text-sm"
+                  className="mb-3 min-h-11 w-full min-w-0 rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 sm:text-sm"
                 />
 
-                <label className="mb-1 block text-sm font-semibold">
+                <label className="mb-1 block text-sm font-semibold text-slate-200">
                   Description
                 </label>
                 <textarea
@@ -727,7 +728,7 @@ export default function ProductsPage() {
                   onChange={(e) =>
                     updateProductField(i, 'description', e.target.value)
                   }
-                  className="min-h-32 w-full min-w-0 resize-y rounded-md border px-3 py-2.5 text-base sm:min-h-28 sm:text-sm"
+                  className="min-h-32 w-full min-w-0 resize-y rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 sm:min-h-28 sm:text-sm"
                 />
               </div>
             );
@@ -735,7 +736,7 @@ export default function ProductsPage() {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-400">
             Showing {products.length === 0 ? 0 : (visiblePage - 1) * itemsPerPage + 1}
             -
             {Math.min(visiblePage * itemsPerPage, products.length)} of{' '}
@@ -745,7 +746,7 @@ export default function ProductsPage() {
             <button
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
               disabled={visiblePage === 1}
-              className="min-h-10 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-white/10 disabled:opacity-50"
             >
               Previous
             </button>
@@ -754,13 +755,13 @@ export default function ProductsPage() {
                 setCurrentPage((page) => Math.min(totalPages, page + 1))
               }
               disabled={visiblePage === totalPages}
-              className="min-h-10 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+              className="min-h-10 rounded-lg border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-slate-100 shadow-sm hover:bg-white/10 disabled:opacity-50"
             >
               Next
             </button>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

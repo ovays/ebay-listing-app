@@ -54,7 +54,7 @@ function getEbayCleanupIds(product: DeleteProductRecord, id: string | number) {
     hasEbayState,
     itemId,
     offerId,
-    sku: storedSku ?? (hasEbayState ? `product-${id}` : null),
+    sku: storedSku ?? `product-${id}`,
   };
 }
 
@@ -170,6 +170,7 @@ export async function POST(req: Request) {
     const headers = getEbayHeaders(auth.tokenSet.accessToken);
 
     if (offerId) {
+      console.log('WITHDRAW', offerId);
       await cleanupEbayResource({
         body: JSON.stringify({ reason: 'SELLER_ENDED' }),
         headers,
@@ -181,6 +182,7 @@ export async function POST(req: Request) {
         )}/withdraw`,
       });
 
+      console.log('DELETE OFFER', offerId);
       await cleanupEbayResource({
         headers,
         method: 'DELETE',
@@ -193,6 +195,7 @@ export async function POST(req: Request) {
     }
 
     if (sku) {
+      console.log('DELETE INVENTORY', sku);
       await cleanupEbayResource({
         headers,
         method: 'DELETE',

@@ -1,75 +1,25 @@
-import { supabase } from '@/lib/supabase';
+import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-type UpdateBody = {
-  id?: string | number;
-  updates?: Record<string, unknown>;
-  products?: Array<{
-    id?: string | number;
-    title?: string;
-    price?: string | number;
-    description?: string;
-  }>;
-};
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = (await req.json()) as UpdateBody;
+    const { id, updates } = await request.json();
 
-    if (body.id && body.updates && typeof body.updates === 'object') {
-      const { data, error } = await supabase
-        .from('products')
-        .update(body.updates)
-        .eq('id', body.id)
-        .select();
+    console.log("Incoming update:", id, updates);
 
-      if (error) {
-        console.log('UPDATE ERROR:', error);
-        return Response.json({ success: false, error }, { status: 500 });
-      }
+    const { error } = await supabase
+      .from("products")
+      .update(updates)
+      .eq("id", id);
 
-      return Response.json({ success: true, data });
+    if (error) {
+      console.error("Supabase update error:", error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (Array.isArray(body.products)) {
-      const updates = [];
-
-      for (const product of body.products) {
-        const { id, title, price, description } = product;
-
-        if (!id) {
-          continue;
-        }
-
-        const { data, error } = await supabase
-          .from('products')
-          .update({
-            title,
-            price,
-            description,
-          })
-          .eq('id', id)
-          .select();
-
-        if (error) {
-          console.log('UPDATE ERROR:', error);
-          return Response.json({ success: false, error }, { status: 500 });
-        }
-
-        updates.push(data);
-      }
-
-      return Response.json({ success: true, data: updates });
-    }
-
-    return Response.json(
-      { success: false, error: 'Invalid body' },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: true });
   } catch (err) {
-    console.log(err);
-    return Response.json(
-      { success: false, error: 'Server error' },
-      { status: 500 }
-    );
+    console.error("Update route error:", err);
+    return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
