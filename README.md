@@ -1,4 +1,4 @@
-# ListForge AI — Agentic eBay Listing Automation Engine
+# ListForge AI - Agentic eBay Listing Automation Engine
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![React](https://img.shields.io/badge/React-19-087EA4)
