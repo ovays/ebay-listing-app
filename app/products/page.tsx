@@ -170,13 +170,11 @@ export default function ProductsPage() {
     }
 
     try {
-      console.log('Updating category:', product.id, value);
+      console.log('Saving category:', value);
 
       const res = await fetch('/api/update', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: product.id,
           updates: {
@@ -541,12 +539,7 @@ export default function ProductsPage() {
           </div>
         )}
 
-        <div
-          className="product-grid"
-          style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
-          }}
-        >
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {paginatedProducts.map((p, pageIndex) => {
             const i = (visiblePage - 1) * itemsPerPage + pageIndex;
             const productPublishId = p.id ?? i;
@@ -569,68 +562,74 @@ export default function ProductsPage() {
             return (
               <div
                 key={p.id ?? i}
-                className="product-card min-w-0 overflow-hidden border border-white/10 bg-slate-900/80 p-4 backdrop-blur sm:p-5"
+                className={`w-full max-w-sm mx-auto ${
+                  paginatedProducts.length === 1
+                    ? 'sm:col-span-2 lg:col-span-1 lg:col-start-2'
+                    : ''
+                }`}
               >
-                {p.images?.[0] && (
-                  <img
-                    src={p.images[0]}
-                    alt={p.title ? `${p.title} product image` : 'Product image'}
-                    className="mb-3 aspect-[4/3] w-full rounded object-cover"
-                    onError={(e) => {
-                      e.currentTarget.classList.add('hidden');
-                      setBrokenImageKeys((currentKeys) => {
-                        const nextKeys = new Set(currentKeys);
-                        nextKeys.add(`${i}:0:${p.images?.[0] ?? ''}`);
-                        return nextKeys;
-                      });
-                    }}
-                  />
-                )}
+                <div className="bg-gray-900 rounded-xl overflow-hidden shadow-md">
+                  {p.images?.[0] && (
+                    <img
+                      src={p.images[0]}
+                      alt={p.title ? `${p.title} product image` : 'Product image'}
+                      className="w-full h-64 object-cover"
+                      onError={(e) => {
+                        e.currentTarget.classList.add('hidden');
+                        setBrokenImageKeys((currentKeys) => {
+                          const nextKeys = new Set(currentKeys);
+                          nextKeys.add(`${i}:0:${p.images?.[0] ?? ''}`);
+                          return nextKeys;
+                        });
+                      }}
+                    />
+                  )}
 
-                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Publish status
-                    </p>
-                    <p className="break-words text-sm font-semibold text-slate-100">
-                      {publishStatus}
-                    </p>
-                  </div>
-                  <span
-                    className={`w-fit rounded px-2 py-1 text-xs ${
-                      validation.valid
-                        ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/20'
-                        : 'bg-red-400/10 text-red-200 ring-1 ring-red-400/20'
-                    }`}
-                  >
-                    {validation.valid ? 'Valid' : 'Needs fixes'}
-                  </span>
-                  <button
-                    onClick={() => publishProduct(i)}
-                    disabled={
-                      publishingProductId !== null ||
-                      (!validation.valid && !isPublished)
-                    }
-                    className="min-h-10 rounded-lg bg-violet-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:opacity-60 sm:w-auto"
-                  >
-                    {isPublishing
-                      ? 'Publishing...'
-                      : isPublished
-                        ? 'Sync'
-                      : p.publish_status === 'publishing'
-                        ? 'Recover'
-                      : p.publish_status === 'error'
-                        ? 'Retry'
-                        : 'Publish'}
-                  </button>
-                  <button
-                    onClick={() => p.id && deleteProduct(String(p.id))}
-                    disabled={isPublishing || !p.id}
-                    className="min-h-9 rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400 disabled:opacity-60"
-                  >
-                    Delete
-                  </button>
-                </div>
+                  <div className="p-4 sm:p-5">
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Publish status
+                        </p>
+                        <p className="break-words text-sm font-semibold text-slate-100">
+                          {publishStatus}
+                        </p>
+                      </div>
+                      <span
+                        className={`w-fit rounded px-2 py-1 text-xs ${
+                          validation.valid
+                            ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/20'
+                            : 'bg-red-400/10 text-red-200 ring-1 ring-red-400/20'
+                        }`}
+                      >
+                        {validation.valid ? 'Valid' : 'Needs fixes'}
+                      </span>
+                      <button
+                        onClick={() => publishProduct(i)}
+                        disabled={
+                          publishingProductId !== null ||
+                          (!validation.valid && !isPublished)
+                        }
+                        className="min-h-10 rounded-lg bg-violet-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-violet-400 disabled:opacity-60 sm:w-auto"
+                      >
+                        {isPublishing
+                          ? 'Publishing...'
+                          : isPublished
+                            ? 'Sync'
+                          : p.publish_status === 'publishing'
+                            ? 'Recover'
+                          : p.publish_status === 'error'
+                            ? 'Retry'
+                            : 'Publish'}
+                      </button>
+                      <button
+                        onClick={() => p.id && deleteProduct(String(p.id))}
+                        disabled={isPublishing || !p.id}
+                        className="min-h-9 rounded-lg bg-red-500/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-400 disabled:opacity-60"
+                      >
+                        Delete
+                      </button>
+                    </div>
 
                 {(p.ebay_inventory_item_id || p.ebay_offer_id || p.ebay_item_id) && (
                   <dl className="mb-3 space-y-1 rounded-lg border border-white/10 bg-white/[0.04] p-3 text-xs text-slate-400">
@@ -730,6 +729,8 @@ export default function ProductsPage() {
                   }
                   className="min-h-32 w-full min-w-0 resize-y rounded-lg border border-white/10 bg-slate-950/80 px-3 py-2.5 text-base text-slate-100 outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20 sm:min-h-28 sm:text-sm"
                 />
+                  </div>
+                </div>
               </div>
             );
           })}
