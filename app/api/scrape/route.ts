@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const products = await scrapeCategory(url);
+    const products = (await scrapeCategory(url)).map((product) => ({
+      ...product,
+      quantity: product.quantity || 1,
+    }));
 
     return NextResponse.json(
       { success: true, data: products },

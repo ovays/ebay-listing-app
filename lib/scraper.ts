@@ -6,6 +6,7 @@ interface Product {
   price: string;
   images: string[];
   description: string;
+  quantity: number;
 }
 
 export async function scrapeCategory(categoryUrl: string): Promise<Product[]> {
@@ -91,6 +92,18 @@ export async function scrapeCategory(categoryUrl: string): Promise<Product[]> {
 
         const description = productPage('.woocommerce-Tabs-panel--description').text().trim();
         const truncatedDescription = description.replace(/\s+/g, ' ').substring(0, 1000).trim();
+        const stockText = productPage('.stock.in-stock').text();
+        let quantity = 1;
+
+        if (stockText) {
+          const match = stockText.match(/\d+/);
+
+          if (match) {
+            quantity = parseInt(match[0], 10);
+          }
+        }
+
+        console.log('Parsed stock:', stockText, '→ quantity:', quantity);
 
         console.log(`Product title: ${title}`);
         console.log(`Product images: ${images.length}`);
@@ -100,7 +113,8 @@ export async function scrapeCategory(categoryUrl: string): Promise<Product[]> {
             title,
             price,
             images,
-            description: truncatedDescription
+            description: truncatedDescription,
+            quantity
           });
         } else {
           console.log(`Skipping invalid product: ${link}`);

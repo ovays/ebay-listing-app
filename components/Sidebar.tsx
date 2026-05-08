@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 
 const menuItems = [
   { label: 'Dashboard', href: '/dashboard', icon: 'D' },
-  { label: 'Products', href: '/products', icon: 'P' },
+  { label: 'Products (Draft)', href: '/products', icon: 'D' },
+  { label: 'Published', href: '/products/published', icon: 'P' },
+  { label: 'Errors', href: '/products/errors', icon: 'E' },
   { label: 'Import', href: '/import', icon: 'I' },
   { label: 'Settings', href: '/settings', icon: 'S' },
 ];
@@ -34,7 +36,9 @@ export default function Sidebar() {
       <nav className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:mt-8 lg:grid-cols-1">
         {menuItems.map((item) => {
           const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+            item.href === '/products'
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
           return (
             <Link

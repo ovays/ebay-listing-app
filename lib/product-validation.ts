@@ -3,6 +3,7 @@ export type ProductValidationInput = {
   price?: string | number | null;
   description?: string | null;
   images?: string[] | null;
+  quantity?: number | null;
 };
 
 export type ProductValidationResult = {
@@ -12,6 +13,7 @@ export type ProductValidationResult = {
   invalidPrice: boolean;
   missingDescription: boolean;
   missingImages: boolean;
+  invalidQuantity: boolean;
   brokenImages: boolean;
   duplicate: boolean;
 };
@@ -73,6 +75,8 @@ export function validateProduct(
   const invalidPrice = getNumericPrice(product.price) === null;
   const missingDescription = !product.description?.trim();
   const missingImages = images.length === 0;
+  const invalidQuantity =
+    typeof product.quantity === 'number' && product.quantity < 1;
   const brokenImages =
     !missingImages &&
     (hasInvalidImageUrl(images) ||
@@ -84,6 +88,7 @@ export function validateProduct(
     invalidPrice ? 'Add a valid price greater than 0.' : null,
     missingDescription ? 'Add a product description.' : null,
     missingImages ? 'Add at least one product image.' : null,
+    invalidQuantity ? 'Quantity must be at least 1.' : null,
     brokenImages ? 'Fix or replace broken image links.' : null,
     duplicate ? 'Review duplicate product title and price.' : null,
   ].filter((message): message is string => Boolean(message));
@@ -95,6 +100,7 @@ export function validateProduct(
     invalidPrice,
     missingDescription,
     missingImages,
+    invalidQuantity,
     brokenImages,
     duplicate,
   };
@@ -111,6 +117,7 @@ export function getProductValidationSummary(
     missingDescription: results.filter((result) => result.missingDescription)
       .length,
     missingImages: results.filter((result) => result.missingImages).length,
+    invalidQuantity: results.filter((result) => result.invalidQuantity).length,
     brokenImages: results.filter((result) => result.brokenImages).length,
     duplicates: results.filter((result) => result.duplicate).length,
   };

@@ -12,6 +12,7 @@ interface Product {
   price: string;
   images: string[];
   description: string;
+  quantity: number;
 }
 
 export default function ImportPage() {

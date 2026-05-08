@@ -16,7 +16,6 @@ const EBAY_AU_MERCHANT_LOCATION_KEY =
   process.env.EBAY_AU_MERCHANT_LOCATION_KEY?.trim() || 'AU_DEFAULT_LOCATION';
 const EBAY_AU_LOCATION_POSTAL_CODE =
   process.env.EBAY_AU_LOCATION_POSTAL_CODE?.trim() || '2000';
-const EBAY_AU_OFFER_QUANTITY = 10;
 const EBAY_DEFAULT_RETURN_POLICY_ID =
   process.env.EBAY_DEFAULT_RETURN_POLICY_ID?.trim() || '';
 const EBAY_DEFAULT_FULFILLMENT_POLICY_ID =
@@ -61,7 +60,12 @@ type PublishProduct = {
   title?: string;
   brand?: string;
   categoryName?: string;
+  categoryId?: string | null;
+  categoryPath?: string | null;
+  ebayCategoryId?: string | null;
+  ebayCategoryBreadcrumb?: string | null;
   price?: string | number;
+  quantity?: number;
   description?: string;
   images?: string[];
   fulfillmentPolicyId?: string;
@@ -110,34 +114,6 @@ function logEbayInventoryHeaders(step: string, headers: EbayInventoryHeaders) {
     step,
     headers: safeHeaders,
   });
-}
-
-function mapType(category: string): string {
-  if (!category) return 'Nail Gel';
-
-  const c = category.toLowerCase();
-
-  if (c.includes('extension')) return 'Builder Gel';
-  if (c.includes('polish')) return 'Gel Polish';
-  if (c.includes('coating')) return 'Nail Gel';
-  if (c.includes('tips')) return 'Nail Tips';
-  if (c.includes('stickers')) return 'Nail Art';
-  if (c.includes('filer')) return 'Nail File';
-
-  return 'Nail Gel';
-}
-
-function mapCategoryToEbayId(category: string): string {
-  const c = category.toLowerCase();
-
-  if (c.includes('polish')) return '67684';
-  if (c.includes('extension')) return '175669';
-  if (c.includes('coating')) return '175669';
-  if (c.includes('tips')) return '67688';
-  if (c.includes('stickers')) return '67691';
-  if (c.includes('filer')) return '67687';
-
-  return '175669';
 }
 
 function formatDescription(product: PublishProduct) {
@@ -242,31 +218,32 @@ async function fetchEbayInventory(
 
 function getInventoryItemPayload(
   product: PublishProduct,
-  imageUrls: string[]
+  cleanedImages: string[]
 ) {
-  const brand = product.brand?.trim() || 'Unbranded';
-  const categoryName = product.categoryName?.trim() || '';
+  const quantity = getProductQuantity(product.quantity);
   const aspects: Record<string, string[]> = {
-    Brand: [brand],
-    Type: [mapType(categoryName)],
+    Brand: ['Unbranded'],
+    Type: ['Builder Gel'],
+    Shade: [product.title?.includes('ROSE GOLD') ? 'Rose Gold' : 'Clear'],
   };
 
+  console.log('Final aspects:', aspects);
   console.info('[eBay Publish] Inventory item aspects', { aspects });
 
   return {
     product: {
       title: product.title?.trim(),
       description: product.description,
-      imageUrls,
+      imageUrls: cleanedImages,
       aspects,
     },
     availability: {
       shipToLocationAvailability: {
-        quantity: EBAY_AU_OFFER_QUANTITY,
+        quantity,
         availabilityDistributions: [
           {
             merchantLocationKey: EBAY_AU_MERCHANT_LOCATION_KEY,
-            quantity: EBAY_AU_OFFER_QUANTITY,
+            quantity,
           },
         ],
       },
@@ -276,12 +253,14 @@ function getInventoryItemPayload(
 }
 
 function getOfferPayload({
+  categoryId,
   includeCreateOnlyFields,
   policies,
   price,
   product,
   sku,
 }: {
+  categoryId: string;
   includeCreateOnlyFields: boolean;
   policies: ListingPolicies;
   price: number;
@@ -320,6 +299,7 @@ function getOfferPayload({
     !listingPolicies.returnPolicyId &&
     EBAY_AU_MARKETPLACE_ID === 'EBAY_AU' &&
     returnPolicySupportsReturns;
+  const quantity = getProductQuantity(product.quantity);
 
   if (
     !listingPolicies.fulfillmentPolicyId ||
@@ -330,8 +310,8 @@ function getOfferPayload({
   }
 
   const payload = {
-    availableQuantity: EBAY_AU_OFFER_QUANTITY,
-    categoryId: mapCategoryToEbayId(product.categoryName ?? ''),
+    availableQuantity: quantity,
+    categoryId,
     country: EBAY_AU_COUNTRY,
     marketplaceId: EBAY_AU_MARKETPLACE_ID,
     merchantLocationKey: EBAY_AU_MERCHANT_LOCATION_KEY,
@@ -481,6 +461,12 @@ function getNumericPrice(price: string | number | undefined) {
   }
 
   return null;
+}
+
+function getProductQuantity(quantity: number | undefined) {
+  return typeof quantity === 'number' && Number.isFinite(quantity) && quantity > 0
+    ? quantity
+    : 1;
 }
 
 async function getEbayJson(
@@ -860,6 +846,11 @@ export async function POST(req: Request) {
 
   let existingProduct:
     | {
+        categoryName?: string | null;
+        categoryId?: string | null;
+        categoryPath?: string | null;
+        ebayCategoryId?: string | null;
+        ebayCategoryBreadcrumb?: string | null;
         publish_status?: string | null;
         ebay_inventory_item_id?: string | null;
         ebay_offer_id?: string | null;
@@ -881,7 +872,7 @@ export async function POST(req: Request) {
     const { data, error: existingProductError } = await supabase
       .from('products')
       .select(
-        'publish_status, ebay_inventory_item_id, ebay_offer_id, ebay_item_id'
+        'categoryName, categoryId, categoryPath, ebayCategoryId, ebayCategoryBreadcrumb, publish_status, ebay_inventory_item_id, ebay_offer_id, ebay_item_id'
       )
       .eq('id', product.id)
       .maybeSingle();
@@ -924,6 +915,13 @@ export async function POST(req: Request) {
       });
     }
 
+    product.categoryName = existingProduct.categoryName ?? product.categoryName;
+    product.categoryId = existingProduct.categoryId ?? product.categoryId;
+    product.categoryPath = existingProduct.categoryPath ?? product.categoryPath;
+    product.ebayCategoryId =
+      existingProduct.ebayCategoryId ?? product.ebayCategoryId;
+    product.ebayCategoryBreadcrumb =
+      existingProduct.ebayCategoryBreadcrumb ?? product.ebayCategoryBreadcrumb;
   }
 
   if (!product.title?.trim() || !product.price) {
@@ -965,6 +963,33 @@ export async function POST(req: Request) {
       { success: false, error: imageValidation.error },
       { status: 400 }
     );
+  }
+
+  const selectedEbayCategoryId =
+    product.categoryId?.trim() || product.ebayCategoryId?.trim();
+
+  if (!selectedEbayCategoryId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Select an eBay leaf category before publishing.',
+      },
+      { status: 400 }
+    );
+  }
+
+  const imageUrls = imageValidation.urls;
+  const cleanedImages = (imageUrls || [])
+    .filter((url) => typeof url === "string")
+    .map((url) => url.trim())
+    .filter((url) => url.startsWith("http"))
+    .filter((url) => !url.includes("placeholder"))
+    .slice(0, 10);
+
+  console.log("Cleaned images:", cleanedImages);
+
+  if (!cleanedImages.length) {
+    throw new Error("No valid images for eBay listing");
   }
 
   const selectedFulfillmentPolicyId = getPolicyId(
@@ -1161,6 +1186,15 @@ export async function POST(req: Request) {
     title: product?.title,
   });
 
+  const categoryId = selectedEbayCategoryId;
+
+  console.log('Using selected eBay category', {
+    categoryName: product.categoryName,
+    ebayCategoryId: selectedEbayCategoryId,
+    ebayCategoryBreadcrumb:
+      product.categoryPath || product.ebayCategoryBreadcrumb,
+  });
+
   let offerId = reconciliation.offerId;
 
   if (offerId) {
@@ -1180,7 +1214,7 @@ export async function POST(req: Request) {
 
     const inventoryPayload = getInventoryItemPayload(
       product,
-      imageValidation.urls
+      cleanedImages
     );
     const inventoryHeaders = getEbayInventoryHeaders({
       accessToken: tokenSet.accessToken,
@@ -1271,6 +1305,7 @@ export async function POST(req: Request) {
     }
 
     const updateOfferPayload = getOfferPayload({
+      categoryId,
       includeCreateOnlyFields: false,
       policies: requiredPolicies,
       price,
@@ -1374,7 +1409,7 @@ export async function POST(req: Request) {
     });
     const inventoryPayload = getInventoryItemPayload(
       product,
-      imageValidation.urls
+      cleanedImages
     );
 
     logEbayPayload('inventory_item_create_or_replace', inventoryPayload);
@@ -1460,6 +1495,7 @@ export async function POST(req: Request) {
       marketplaceId: true,
     });
     const offerPayload = getOfferPayload({
+      categoryId,
       includeCreateOnlyFields: true,
       policies: requiredPolicies,
       price,
